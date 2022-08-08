@@ -22,8 +22,8 @@ _G.Client = {
 _G.Client.Tcp.handshake = "00000"
 _G.Client.Udp.handshake = "00000"
 
-_G.Client.Tcp:connect("192.168.1.65", 8080)
-_G.Client.Udp:connect("192.168.1.65", 8081)
+_G.Client.Tcp:connect("127.0.0.1", 8080)
+_G.Client.Udp:connect("127.0.0.1", 8080)
 
 local camera = require(_G.libDir .. "camera")()
 local world = nil
@@ -48,11 +48,22 @@ _G.Client.Tcp.callbacks.recv = function (data)
         world = World:new(packet.world.width, packet.world.height, packet.world.entities)
     end
 end
+local image = love.graphics.newImage("eclair.png")
+local psystem = love.graphics.newParticleSystem(image, 32)
+
+function love.load()
+
+	psystem:setParticleLifetime(2, 5) -- Particles live at least 2s and at most 5s.
+	psystem:setEmissionRate(5)  
+	psystem:setSizeVariation(0)
+	psystem:setLinearAcceleration(-20, -20, 20, 20) -- Random movement in all directions.
+	psystem:setColors(1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0) -- Fade to transparency.
+end
 
 function love.update(dt)
     _G.Client.Tcp:update(dt)
     _G.Client.Udp:update(dt)
-
+    psystem:update(dt)
     local z = love.keyboard.isDown("z");
     local w = love.keyboard.isDown("w");
     local q = love.keyboard.isDown("q");
@@ -104,10 +115,10 @@ function love.update(dt)
         data = { x = mx, y = my },
     }))
 
-    _G.Client.Udp:send(_G.bitser.dumps({
-        id = "player_shield",
-        data = true
-    }))
+    -- _G.Client.Udp:send(_G.bitser.dumps({
+    --     id = "player_shield",
+    --     data = true
+    -- }))
     
     if type(world) == "table" then
         for i, entity in ipairs(world.entities) do
@@ -141,7 +152,19 @@ function love.draw()
             local eShield = entity.components["Shield"]
             local eLife = entity.components["Life"]
             local eClan = entity.components["Clan"]
+            local eName = entity.components["Name"]
             if ePos and eDim and eOri then
+                love.graphics.push()
+                love.graphics.translate(ePos.position.x + eDim.width / 2, ePos.position.y + eDim.height / 2)
+                love.graphics.rotate(eOri.orientation)
+                love.graphics.rectangle("fill", -(eDim.width/2), -(eDim.height/2), eDim.width , eDim.height)
+                love.graphics.pop()
+            end
+            if ePos and eDim and eOri and eLife then
+                love.graphics.setColor(1,0,0,1)
+                love.graphics.rectangle("fill", ePos.position.x, ePos.position.y - eDim.width / 2, 32 * (eLife.life / eLife.maxLife ), 8 )
+                love.graphics.setColor(1,1,1,1)
+                love.graphics.rectangle("line", ePos.position.x, ePos.position.y - eDim.width / 2, 32, 8 )
                 love.graphics.push()
                 love.graphics.translate(ePos.position.x + eDim.width / 2, ePos.position.y + eDim.height / 2)
                 love.graphics.rotate(eOri.orientation)
@@ -176,6 +199,7 @@ function love.draw()
                 love.graphics.setColor(1,1,1,1)
                 love.graphics.rectangle("line", ePos.position.x, ePos.position.y - eDim.width / 2, 32, 8 )
                 if eShield.activated then
+                    love.graphics.draw(psystem, ePos.position.x, ePos.position.y, 0)
                     love.graphics.setColor(0,0,1, eShield.armor / 100)
                     love.graphics.push()
                     love.graphics.translate(ePos.position.x + 4 + (48 * math.cos(eOri.orientation)), ePos.position.y + 24 + (48 * math.sin(eOri.orientation)))
@@ -185,40 +209,6 @@ function love.draw()
                     love.graphics.setColor(1,1,1,1)
                 end
             end
-            -- if v.position then
-            --     if v.id == clientId then
-            --         love.graphics.setColor(0,1,0,1)
-            --     else
-            --         if v.isPlayer then
-            --             if v.pvp then
-            --                 love.graphics.setColor(1,0,0,1)
-            --             else
-            --                 love.graphics.setColor(0,0,1,1)
-            --             end
-            --         else
-            --             love.graphics.setColor(1,1,1,1)
-            --         end
-            --     end
-            --     if v.width and v.height then
-            --         love.graphics.push()
-            --         love.graphics.translate(v.position.x + v.width / 2, v.position.y + v.height / 2)
-            --         love.graphics.rotate(v.orientation)
-            --         love.graphics.rectangle("fill", -(v.width/2), -(v.height/2), v.width , v.height)
-            --         love.graphics.pop()
-            --         if v.activated then
-            --             love.graphics.push()
-            --             love.graphics.translate(v.position.x + 4 + (48 * math.cos(v.orientation)), v.position.y + 24 + (48 * math.sin(v.orientation)))
-            --             love.graphics.rotate(v.orientation)
-            --             love.graphics.rectangle("fill", -4, -24, 8, 48)
-            --             love.graphics.pop()
-            --         end
-            --     end
-            -- end
-            -- if v.life then
-            --     love.graphics.setColor(1,0,0,1)
-            --     love.graphics.rectangle("fill", v.position.x, v.position.y - 16, 32, 8 )
-            --     love.graphics.setColor(1,1,1,1)
-            -- end
         end
     end
     camera:detach()
