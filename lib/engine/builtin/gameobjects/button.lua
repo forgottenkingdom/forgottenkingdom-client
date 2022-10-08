@@ -1,18 +1,75 @@
-local GameObject = require(_G.libDir .. "engine.gameobject")
-local Button = require(_G.libDir .. "middleclass")("Button")
+local ButtonElement = require(_G.libDir .. "middleclass")("ButtonElement")
 
-function Button:initialize(text, x, y)
-    GameObject.initialize(self)
-    self.text = love.graphics.newText(love.font, text)
-    self.position = {
-        x = x,
-        y = y
+function ButtonElement:initialize( text, x, y, disabled)
+    self.text = love.graphics.newText(love.graphics.getFont(), text)
+
+    self.rect = {
+        x = x or 0,
+        y = y or 0
     }
+
+    self.disabled = disabled or false
+
+    self.onClick = {}
 end
 
-function Button:draw()
-    GameObject.draw(self)
-
-    local w, h = self.text:getDimensions(0)
-    love.graphics.rectangle("line", self.position.x, self.position.y, w, h)
+function ButtonElement:addOnClickEvent( eventId, eventHandler )
+    local found = false
+    for i, event in ipairs(self.onClick) do
+        if event.id == eventId then
+            found = true
+        end
+    end
+    if found ~= true then
+        table.insert(self.onClick, #self.onClick + 1, { id = eventId, handler = eventHandler})
+    end
 end
+function ButtonElement:removeOnClickEvent( eventId, eventHandler )
+    for i, event in ipairs(self.onClick) do
+        if event.id == eventId then
+            table.remove(self.onClick, i)
+        end
+    end
+end
+
+function ButtonElement:click()
+    for i in ipairs(self.onClick) do
+        if self.onClick[i].handler ~= nil then
+            self.onClick[i].handler()
+        end
+    end
+end
+
+function ButtonElement:draw ()
+    local mx, my = love.mouse.getPosition()
+    if not self.disabled then
+        if mx > self.rect.x and mx < self.rect.x + self.text:getWidth() + 8
+        and my > self.rect.y and my < self.rect.y + self.text:getHeight() + 8 then
+            love.graphics.rectangle("fill", self.rect.x, self.rect.y, self.text:getWidth() + 8, self.text:getHeight() + 8)
+            love.graphics.setColor(0,0,0,1)
+            love.graphics.draw(self.text, self.rect.x + 2, self.rect.y + 2)
+            love.graphics.setColor(1,1,1,1)
+        else
+            love.graphics.rectangle("line", self.rect.x, self.rect.y, self.text:getWidth() + 8, self.text:getHeight() + 8 )
+            love.graphics.draw(self.text, self.rect.x + 2, self.rect.y + 2)
+        end
+    else
+        love.graphics.setColor(128/255,128/255,128/255,1)
+        love.graphics.rectangle("line", self.rect.x, self.rect.y, self.text:getWidth() + 8, self.text:getHeight() + 8 )
+        love.graphics.draw(self.text, self.rect.x + 2, self.rect.y + 2)
+        love.graphics.setColor(1,1,1,1)
+    end
+end
+
+function ButtonElement:mousepressed(mx, my, button)
+    if button == 1 then
+        if mx > self.rect.x and mx < self.rect.x + self.text:getWidth() + 8
+        and my > self.rect.y and my < self.rect.y + self.text:getHeight() + 8 then
+            if not self.disabled then
+                self:click()
+            end
+        end
+    end
+end
+
+return ButtonElement

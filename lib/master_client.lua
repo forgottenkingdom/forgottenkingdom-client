@@ -1,8 +1,7 @@
-local UdpClient = require(_G.libDir .. "middleclass")("UdpClient")
+local TcpClient = require(_G.libDir .. "middleclass")("TcpClient")
 local socket = require("socket")
 
-function UdpClient:initialize()
-	-- 'Initialize' our variables
+function TcpClient:initialize()
 	self.host = nil
 	self.port = nil
 	self.connected = false
@@ -13,44 +12,8 @@ function UdpClient:initialize()
 	self.handshake = "00000"
 	self.ping = nil
 end
-function UdpClient:createSocket()
-	self.socket = socket.udp()
-	self.socket:settimeout(0)
-end
 
-function UdpClient:_connect()
-	-- We're connectionless,
-	-- guaranteed success!
-	return true
-end
-
-function UdpClient:_disconnect()
-	-- Well, that's easy.
-end
-
-function UdpClient:_send(data)
-	return self.socket:sendto(data, self.host, self.port)
-end
-
-function UdpClient:_receive()
-	local data, ip, port = self.socket:receivefrom(65536)
-	if ip == self.host and port == self.port then
-		return data
-	end
-	return false, data and "Unknown remote sent data." or ip
-end
-
-function UdpClient:setOption(option, value)
-	if option == "broadcast" then
-		self.socket:setoption("broadcast", not not value)
-	end
-end
-
-function UdpClient:setPing(enabled, time, msg)
-	-- If ping is enabled, create a self.ping
-	-- and set the time and the message in it,
-	-- but most importantly, keep the time.
-	-- If disabled, set self.ping to nil.
+function TcpClient:setPing(enabled, time, msg)
 	if enabled then
 		self.ping = {
 			time = time,
@@ -62,7 +25,8 @@ function UdpClient:setPing(enabled, time, msg)
 	end
 end
 
-function UdpClient:connect(host, port, dns)
+
+function TcpClient:connect(host, port, dns)
 	-- Verify our inputs.
 	if not host or not port then
 		return false, "Invalid arguments"
@@ -75,11 +39,10 @@ function UdpClient:connect(host, port, dns)
 		end
 		host = ip
 	end
-	-- Set it up for our new connection.
+	-- Set it up for ou00000r new connection.
 	self:createSocket()
 	self.host = host
 	self.port = tonumber(port)
-    self.socket:setsockname(self.host, self.port)
 	-- Ask our implementation to actually connect.
 	local success, err = self:_connect()
 	if not success then
@@ -90,30 +53,14 @@ function UdpClient:connect(host, port, dns)
 	self.connected = true
 	-- Send our handshake if we have one.
 	if self.handshake then
-        local test, state = self:send(self.handshake .. "+\n")
-		local packet = _G.bitser.dumps({
-			id = "connection",
-			data = {
-				email = _G.user.email,
-				token = _G.user.token,
-				characterName = _G.user.selectedCharacter
-			}
-		})
-        local test, state = self:send(packet)
+		self:send(self.handshake .. "+\n")
 	end
 	return true
 end
 
-function UdpClient:disconnect()
+function TcpClient:disconnect()
 	if self.connected then
 		self:send(self.handshake .. "-\n")
-		local packet = _G.bitser.dumps({
-			id = "disconnection",
-			data = {
-				email = _G.user.email
-			}
-		})
-		self:send(packet)
 		self:_disconnect()
 		self.host = nil
 		self.port = nil
@@ -121,16 +68,15 @@ function UdpClient:disconnect()
 	end
 end
 
-function UdpClient:send(data)
+function TcpClient:send(data)
 	-- Check if we're connected and pass it on.
-    
 	if not self.connected then
 		return false, "Not connected"
 	end
-    return self:_send(data)
+	return self:_send(data)
 end
 
-function UdpClient:receive()
+function TcpClient:receive()
 	-- Check if we're connected and pass it on.
 	if not self.connected then
 		return false, "Not connected"
@@ -138,7 +84,7 @@ function UdpClient:receive()
 	return self:_receive()
 end
 
-function UdpClient:update(dt)
+function TcpClient:update(dt)
 	if not self.connected then return end
 	assert(dt, "Update needs a dt!")
 	-- First, let's handle ping messages.
@@ -162,4 +108,49 @@ function UdpClient:update(dt)
 end
 
 
-return UdpClient
+function TcpClient:createSocket()
+	self.socket = socket.tcp()
+	self.socket:settimeout(0)
+end
+
+function TcpClient:_connect()
+	self.socket:settimeout(5)
+	local success, err = self.socket:connect(self.host, self.port)
+	self.socket:settimeout(0)
+	return success, err
+end
+
+function TcpClient:_disconnect()
+	-- Well, that's easy.
+	self.socket:shutdown()
+end
+
+function TcpClient:_send(data)
+	return self.socket:send(data)
+end
+
+function TcpClient:_receive()
+	local packet = ""
+	local data, _, partial = self.socket:receive(16384)
+	self.socket:settimeout(0)
+	while data do
+		packet = packet .. data
+		data, _, partial = self.socket:receive(16384)
+		self.socket:settimeout(0)
+	end
+	if not data and partial then
+		packet = packet .. partial
+	end
+	if packet ~= "" then
+		return packet
+	end
+	return nil, "No messages"
+end
+
+function TcpClient:setOption(option, value)
+	if option == "broadcast" then
+		self.socket:setoption("broadcast", not not value)
+	end
+end
+
+return TcpClient

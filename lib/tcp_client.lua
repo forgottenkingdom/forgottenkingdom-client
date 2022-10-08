@@ -1,8 +1,7 @@
 local TcpClient = require(_G.libDir .. "middleclass")("TcpClient")
 local socket = require("socket")
 
-function TcpClient:initialize(uuid)
-	self.uuid = uuid
+function TcpClient:initialize()
 	self.host = nil
 	self.port = nil
 	self.connected = false
@@ -57,7 +56,11 @@ function TcpClient:connect(host, port, dns)
 		self:send(self.handshake .. "+\n")
 		local packet = _G.bitser.dumps({
 			id = "connection",
-			uuid = self.uuid
+			data = {
+				email = _G.user.email,
+				token = _G.user.token,
+				characterName = _G.user.selectedCharacter
+			}
 		})
         self:send(packet)
 	end
@@ -68,7 +71,9 @@ function TcpClient:disconnect()
 	if self.connected then
 		local packet = _G.bitser.dumps({
 			id = "disconnection",
-			uuid = self.uuid
+			data = {
+				email = _G.user.email
+			}
 		})
         self:send(packet)
 		self:send(self.handshake .. "-\n")
@@ -114,7 +119,6 @@ function TcpClient:update(dt)
 		while data do
 			self.callbacks.recv(data)
 			data, err = self:_receive()
-			print(data)
 		end
 	end
 end
@@ -144,9 +148,11 @@ end
 function TcpClient:_receive()
 	local packet = ""
 	local data, _, partial = self.socket:receive(16384)
+	self.socket:settimeout(0)
 	while data do
 		packet = packet .. data
 		data, _, partial = self.socket:receive(16384)
+		self.socket:settimeout(0)
 	end
 	if not data and partial then
 		packet = packet .. partial
