@@ -13,14 +13,14 @@ function GameMainMenuScreen:init()
     local w, h = love.graphics.getDimensions()
 
     self.nodes = {
-        connectButton = ButtonElement:new("Connect", 10, 150),
+        worldButton = ButtonElement:new("WorldEditor", 10, 150),
         playMultiButton = ButtonElement:new("Online", 10, 50, true),
         optionButton = ButtonElement:new("option", 10, 100),
         emailLabel = LabelElement:new(_G.user.email, w - 200, 10)
     }
 
-    self.nodes.connectButton:addOnClickEvent("changeScreen", function ()
-        _G.xle.Scene.goToScene("scene-servers");
+    self.nodes.worldButton:addOnClickEvent("changeScreen", function ()
+        _G.xle.Scene.goToScene("scene-world");
     end)
 
 
@@ -41,7 +41,7 @@ function GameMainMenuScreen:initMasterServer()
 
     _G.masterServer.handshake = "00000"
 
-    _G.masterServer:connect("127.0.0.1", 8080)
+    _G.masterServer:connect("192.168.1.62", 8080)
 
     _G.masterServer.callbacks.recv = function (data)
         local packet = _G.bitser.loads(data)

@@ -9,7 +9,6 @@ function ButtonElement:initialize( text, x, y, disabled)
     }
 
     self.disabled = disabled or false
-
     self.onClick = {}
 end
 

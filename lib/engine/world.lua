@@ -5,6 +5,15 @@ function World:initialize(width, height, entities)
     self.height = height or 100
     self.entities = entities or {}
     self.camera = require(_G.libDir .. "camera")()
+    
+    self.tools = {
+        gridSize = {
+            width = 16,
+            height = 16
+        }
+    }
+
+    self.debugActivated = false
 end
 
 function World:getEntityById( entityId )
@@ -28,7 +37,7 @@ function World:updateEntity(entityId, entityData)
         end
     end
 end
-
+ 
 function World:removeEntity(entityId, entityData)
     for i, v in ipairs(self.entities) do
         if v.id == entityId then
@@ -116,7 +125,58 @@ function World:draw()
                 end
             end
         end
+        if self.debugActivated then
+            self:drawDebug()
+        end
     self.camera:detach()
+end
+
+function World:drawDebug()
+    love.graphics.rectangle("line", 0, 0, self.width, self.height)
+    -- draw grid
+    mx, my = self.camera:mousePosition()
+    for x=0, self.width / self.tools.gridSize.width do
+        for y=0, self.height / self.tools.gridSize.height do
+            love.graphics.rectangle("line", x * self.tools.gridSize.width, y * self.tools.gridSize.height, self.tools.gridSize.width, self.tools.gridSize.height )
+            if mx > x * self.tools.gridSize.width and mx < (x * self.tools.gridSize.width) + self.tools.gridSize.width and my > y * self.tools.gridSize.height and my < (y * self.tools.gridSize.height) + self.tools.gridSize.height then
+                love.graphics.rectangle("fill", x * self.tools.gridSize.width, y * self.tools.gridSize.height, self.tools.gridSize.width, self.tools.gridSize.height )
+            end
+        end
+    end 
+end
+
+function World:keyreleased(key)
+    if key == m then
+        self.debugActivated = not self.debugActivated
+    end
+end
+
+function World:mousereleased()
+    mx, my = self.camera:mousePosition()
+    for x=0, self.width / self.tools.gridSize.width do
+        for y=0, self.height / self.tools.gridSize.height do
+            if mx > x * self.tools.gridSize.width and mx < (x * self.tools.gridSize.width) + self.tools.gridSize.width and my > y * self.tools.gridSize.height and my < (y * self.tools.gridSize.height) + self.tools.gridSize.height then
+                self:addEntity({
+                    id = "test",
+                    components = {
+                        Position = {
+                            position = {
+                                x = x * self.tools.gridSize.width,
+                                y = y * self.tools.gridSize.height
+                            }
+                        },
+                        Dimension= {
+                            width = 16,
+                            height = 16
+                        },
+                        Orientation = {
+                            orientation = 0
+                        }
+                    }
+                })
+            end
+        end
+    end
 end
 
 return World
