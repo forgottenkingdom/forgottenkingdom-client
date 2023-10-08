@@ -41,7 +41,7 @@ function GameMainMenuScreen:initMasterServer()
 
     _G.masterServer.handshake = "00000"
 
-    _G.masterServer:connect("192.168.1.62", 8080)
+    _G.masterServer:connect("127.0.0.1", 8080)
 
     _G.masterServer.callbacks.recv = function (data)
         local packet = _G.bitser.loads(data)
@@ -68,15 +68,15 @@ function GameMainMenuScreen:initMasterServer()
         elseif packet.id == "list_character" then
             if packet.data.type == "success" then
                 print(#packet.data.payload)
-                _G.user.characters = packet.data.payload
                 for i, v in ipairs(packet.data.payload) do
-                    -- table.insert(_G.user.characters, #_G.user.characters + 1, v)
+                    table.insert(_G.user.characters, #_G.user.characters + 1, v)
                 end
-                print(packet.data.payload)
             end
+            print("hello")
         elseif packet.id == "play" then
             print(packet.id .. ":".. packet.data.type)
             print("world = " .. packet.data.payload.world.name .. " {" .. packet.data.payload.world.ip .. ":" .. packet.data.payload.world.port .. "}")
+            
             _G.user.selectedCharacter = packet.data.payload.characterName
             if _G.worldServer ~= nil then
                 _G.worldServer:disconnect()

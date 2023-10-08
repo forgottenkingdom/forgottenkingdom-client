@@ -42,10 +42,10 @@ function InputElement:keypressed (key, isrepeat)
 end
 
 function InputElement:mousereleased (x, y, button)
-    if x > self.rect.x and x < self.rect.x + self.text:getWidth + 8 and y > self.rect.y and y < self.rect.y + self.text:getHeight() + 8 then
+    if x > self.rect.x and x < self.rect.x + self.text:getWidth() + 8 and y > self.rect.y and y < self.rect.y + self.text:getHeight() + 8 then
         self.capturedFocus = true
     else
-        self.capturedFocus = false 
+        self.capturedFocus = false
     end
 end
 
